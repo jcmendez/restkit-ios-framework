@@ -1,20 +1,23 @@
 #!/bin/bash
+
+if [ $# -ne 1 ] || ( [ "$1" != "Debug" ] && [ "$1" != "Release" ] ); then
+    echo -e "Copy this script in the RestKit source code folder and call it with"
+    echo -e "\t $ ./pack_restkit_as_framework.sh [Debug|Release]"
+    exit 1
+fi
+
 # Sets the target folders and the final framework product.
 FMK_NAME=RestKit
 FMK_VERSION=A
-FMK_CONFIG=Debug
-#SDKBASEDIR="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.0.sdk/System/Library/Frameworks"
-
-# Could derive this from the current dir, but for now I wanna be sure
-BASEDIR="/Users/jcmendez/Development/github/RestKit"
-cd ${BASEDIR}
+FMK_CONFIG=$1
+BASEDIR=`pwd`
 
 # Install dir will be the final output to the framework.
 # The following line create it in the root folder of the current project.
 INSTALL_DIR=${BASEDIR}/Build/${FMK_NAME}.framework
 
-LIBDIR="${BASEDIR}/Build/${FMK_CONFIG}-iphoneos"
-SIMULATORDIR="${BASEDIR}/Build/${FMK_CONFIG}-iphonesimulator"
+LIBDIR="${BASEDIR}/Build/Products/${FMK_CONFIG}-iphoneos"
+SIMULATORDIR="${BASEDIR}/Build/Products/${FMK_CONFIG}-iphonesimulator"
 
 # Build both architectures.
 xcodebuild -configuration "${FMK_CONFIG}" -target "${FMK_NAME}" -sdk iphoneos
@@ -38,10 +41,10 @@ ln -s "Versions/Current/Libraries" "${INSTALL_DIR}/Libraries"
 
 # Copy the headers and resources files to the framework folder.
 # We choose to use the iphoneos build, the 2 dirs should contain the same files
-ditto "${LIBDIR}/include/RestKit/" "${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/"
-# We want to move the bundle intact, not the contents, so no trailing slash :{
-#ditto "${LIBDIR}/RestKitResources.bundle/" "${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources/"
-cp -R "${LIBDIR}/RestKitResources.bundle" "${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources/"
+ditto "${BASEDIR}/Build/Headers/RestKit/" "${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/"
+
+# Copy the resources bundle
+cp -R "${BASEDIR}/RestKitResources.bundle" "${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources/"
 
 # We choose to iterate over the iphoneos, the 2 dirs should contain the same files
 cd ${LIBDIR}
@@ -50,4 +53,5 @@ for part1 in `find . -name lib\*.a` ; do
   part3="`echo $part1 | sed 's/^\./${INSTALL_DIR}\/Libraries/g'`";
   eval lipo -create "$part1" "$part2" -output "$part3";
 done
+
 exit 0
